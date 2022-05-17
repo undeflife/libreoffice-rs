@@ -1,4 +1,4 @@
-// use bindgen;
+use bindgen;
 
 use std::env;
 use std::io::Result;
@@ -32,29 +32,29 @@ fn make(arg: &str) -> Result<Output> {
 fn configure() -> Result<Output> {
     make("all")
 }
-// fn generate_binding() {
-//     let lo_include_path = std::env::var("LO_INCLUDE_PATH").ok();
-//     if lo_include_path.is_none() {
-//         panic!("no LO_INCLUDE_PATH found");
-//     }
-//     let bindings = bindgen::Builder::default()
-//         .header("wrapper.h")
-//         .clang_arg("-Wall")
-//         .layout_tests(false)
-//         .clang_arg(format!("-I{}", lo_include_path.unwrap()))
-//         .blocklist_function("lok_init_wrapper")
-//         .disable_header_comment()
-//         .generate()
-//         .expect("Unable to generate bindings");
+fn generate_binding() {
+    let lo_include_path = std::env::var("LO_INCLUDE_PATH").ok();
+    if lo_include_path.is_none() {
+        panic!("no LO_INCLUDE_PATH found");
+    }
+    let bindings = bindgen::Builder::default()
+        .header("wrapper.h")
+        .clang_arg("-Wall")
+        .layout_tests(false)
+        .clang_arg(format!("-I{}", lo_include_path.unwrap()))
+        .blocklist_function("lok_init_wrapper")
+        .disable_header_comment()
+        .generate()
+        .expect("Unable to generate bindings");
 
-//     bindings
-//         .write_to_file("src/wrapper/bindings.rs")
-//         .expect("Couldn't write bindings!");
-// }
+    bindings
+        .write_to_file("src/wrapper/bindings.rs")
+        .expect("Couldn't write bindings!");
+}
 
 fn main() {
     let _ = configure();
-    // generate_binding();
+    generate_binding();
     println!("cargo:rustc-link-search=all=./");
     println!("cargo:rustc-link-lib=static=wrapper");
 }
