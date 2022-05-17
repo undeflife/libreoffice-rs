@@ -1,0 +1,7 @@
+/target
+*.gch
+*.o
+*.a
+.DS_Store
+.idea
+.vscode
