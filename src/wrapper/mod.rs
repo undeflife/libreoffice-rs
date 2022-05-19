@@ -4,6 +4,7 @@
     non_camel_case_types,
     non_upper_case_globals
 )]
+#![allow(clippy::all)]
 mod bindings;
 
 #[link(name = "wrapper")]
@@ -32,7 +33,7 @@ impl Office {
         unsafe {
             let lok = lok_init_wrapper(c_install_path.as_ptr());
             Office {
-                lok: lok,
+                lok,
                 lok_clz: (*lok).pClass,
             }
         }
@@ -48,7 +49,7 @@ impl Office {
         let c_url = CString::new(url).unwrap();
         unsafe {
             let doc = (*self.lok_clz).documentLoad.unwrap()(self.lok, c_url.as_ptr());
-            Document { doc: doc }
+            Document { doc }
         }
     }
 

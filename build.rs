@@ -1,5 +1,3 @@
-use bindgen;
-
 use std::env;
 use std::path::Path;
 use std::process::Command;
