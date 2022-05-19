@@ -8,7 +8,7 @@ fn make() {
     let out_dir = env::var("OUT_DIR").unwrap();
     Command::new("gcc")
         .args(&[
-            "wrapper.c",
+            "src/wrapper.c",
             "-c",
             "-fPIC",
             &format!("-I{}", include_path),
@@ -31,7 +31,7 @@ fn generate_binding() {
         panic!("no LO_INCLUDE_PATH found");
     }
     let bindings = bindgen::Builder::default()
-        .header("wrapper.h")
+        .header("src/wrapper.h")
         .clang_arg("-Wall")
         .layout_tests(false)
         .clang_arg(format!("-I{}", lo_include_path.unwrap()))
