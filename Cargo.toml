@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2021"
 description = "Rust binding for LibreOfficeKit"
 keywords = ["LibreOfficeKit", "lok", "ffi"]
-authors = ["Sean Pan undeflife@gmail.com"]
+authors = ["Sean Pan <undeflife@gmail.com>"]
+repository = "https://github.com/undeflife/libreoffice-rs"
+license = "Apache-2.0"
 
 [lib]
 crate-type = ["cdylib","rlib"]
