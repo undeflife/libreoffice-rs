@@ -15,6 +15,10 @@ $ sudo apt-get install libreoffice-core libreofficekit-dev
 ```
 set env variable `C_INCLUDE_PATH` to the LibreOffice headers, if you try to build LibreOfficeKit from source.
 
+due to [this issue](https://github.com/rust-lang/rust-bindgen/issues/1090) , here use a libwrapper.a to carry `static funtion lok_init` which defined in `LibreOfficeKitInit.h`, so you may also need gcc installed.
+
+```c
+
 ## Example
 
 ```rust

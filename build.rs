@@ -35,13 +35,11 @@ fn generate_binding() {
         .clang_arg("-Wall")
         .layout_tests(false)
         .clang_arg(format!("-I{}", lo_include_path.unwrap()))
-        .blocklist_function("lok_init_wrapper")
-        .disable_header_comment()
         .generate()
         .expect("Unable to generate bindings");
 
     bindings
-        .write_to_file("src/wrapper/bindings.rs")
+        .write_to_file("src/bindings.rs")
         .expect("Couldn't write bindings!");
 }
 
