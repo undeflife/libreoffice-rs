@@ -37,7 +37,7 @@ impl Office {
         }
     }
 
-    pub fn document_load(&self, url: &str) -> Document {
+    pub fn document_load(&mut self, url: &str) -> Document {
         unsafe {
             let doc = (*self.lok_clz).documentLoad.unwrap()(
                 self.lok,
@@ -47,7 +47,7 @@ impl Office {
         }
     }
 
-    pub fn document_load_with(&self, url: &str, options: &str) {
+    pub fn document_load_with(&mut self, url: &str, options: &str) {
         unsafe {
             (*self.lok_clz).documentLoadWithOptions.unwrap()(
                 self.lok,
@@ -58,7 +58,7 @@ impl Office {
     }
 }
 impl Document {
-    pub fn save_as(&self, url: &str, format: &str, filter: Option<&str>) {
+    pub fn save_as(&mut self, url: &str, format: &str, filter: Option<&str>) {
         unsafe {
             (*(*self.doc).pClass).saveAs.unwrap()(
                 self.doc,
