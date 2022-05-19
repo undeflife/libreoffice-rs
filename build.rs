@@ -1,37 +1,32 @@
 use bindgen;
 
 use std::env;
-use std::io::Result;
+use std::path::Path;
 use std::process::Command;
-use std::process::Output;
 
 // perform make with argument
-fn make(arg: &str) -> Result<Output> {
-    let current_path = env::current_dir().unwrap();
-    let path_name = format!("{}", current_path.display());
-    println!("executing make command at {}", path_name);
-    let result = Command::new("make")
-        .args(&[arg])
-        .current_dir(path_name)
-        .output();
-
-    match result {
-        Err(e) => {
-            return Err(e);
-        }
-
-        Ok(output) => {
-            println!("status: {}", output.status);
-            println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
-            println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
-            return Ok(output);
-        }
-    }
+fn make() {
+    let include_path = env::var("C_INCLUDE_PATH").unwrap();
+    let out_dir = env::var("OUT_DIR").unwrap();
+    Command::new("gcc")
+        .args(&[
+            "wrapper.c",
+            "-c",
+            "-fPIC",
+            &format!("-I{}", include_path),
+            "-o",
+        ])
+        .arg(&format!("{}/wrapper.o", out_dir))
+        .status()
+        .unwrap();
+    Command::new("ar")
+        .args(&["crus", "libwrapper.a", "wrapper.o"])
+        .current_dir(&Path::new(&out_dir))
+        .status()
+        .unwrap();
+    println!("cargo:rustc-link-search=native={}", out_dir);
 }
 
-fn configure() -> Result<Output> {
-    make("all")
-}
 fn generate_binding() {
     let lo_include_path = std::env::var("LO_INCLUDE_PATH").ok();
     if lo_include_path.is_none() {
@@ -53,8 +48,7 @@ fn generate_binding() {
 }
 
 fn main() {
-    let _ = configure();
+    make();
     generate_binding();
-    println!("cargo:rustc-link-search=all=./");
     println!("cargo:rustc-link-lib=static=wrapper");
 }
