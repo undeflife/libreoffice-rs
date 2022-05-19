@@ -5,6 +5,7 @@ use std::process::Command;
 // perform make with argument
 fn make() {
     let include_path = env::var("C_INCLUDE_PATH").unwrap();
+    let include_path = env::var("LO_INCLUDE_PATH").unwrap();
     let out_dir = env::var("OUT_DIR").unwrap();
     Command::new("gcc")
         .args(&[
