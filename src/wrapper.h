@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include <stdbool.h>
 #include "LibreOfficeKit/LibreOfficeKit.h"
 #include "LibreOfficeKit/LibreOfficeKitInit.h"

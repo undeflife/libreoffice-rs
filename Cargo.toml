@@ -17,3 +17,8 @@ crate-type = ["cdylib","rlib"]
 
 [build-dependencies]
 bindgen = "0.59"
+
+
+[feature]
+default = []
+unstable = ["unstable"]

@@ -13,7 +13,7 @@ you need install LibreOffice, Debian 11 for example:
 ```bash
 $ sudo apt-get install libreoffice-core libreofficekit-dev
 ```
-set env variable `LO_INCLUDE_PATH` to the LibreOffice headers, if your LibreOffice headers doesn't in the PATH.
+set env variable `LO_INCLUDE_PATH` to the LibreOffice headers.
 
 due to [this issue](https://github.com/rust-lang/rust-bindgen/issues/1090) , here use a libwrapper.a to carry `static funtion lok_init` which defined in `LibreOfficeKitInit.h`, so you may also need gcc installed.
 

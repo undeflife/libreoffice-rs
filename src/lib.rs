@@ -9,6 +9,7 @@ mod bindings;
 
 pub use bindings::*;
 
+use core::ffi::c_void;
 use std::ffi::CString;
 
 pub struct Office {
@@ -35,6 +36,12 @@ impl Office {
     pub fn destroy(&mut self) {
         unsafe {
             (*self.lok_clz).destroy.unwrap()(self.lok);
+        }
+    }
+
+    pub fn registerCallback(&mut self, callback: LibreOfficeKitCallback, data: *mut c_void) {
+        unsafe {
+            (*self.lok_clz).registerCallback.unwrap()(self.lok, callback, data);
         }
     }
 

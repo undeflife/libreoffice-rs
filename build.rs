@@ -3,18 +3,11 @@ use std::path::Path;
 use std::process::Command;
 
 // perform make with argument
-fn make() {
-    let include_path = env::var("C_INCLUDE_PATH").unwrap();
-    let include_path = env::var("LO_INCLUDE_PATH").unwrap();
+fn make(path: &str) {
     let out_dir = env::var("OUT_DIR").unwrap();
+
     Command::new("gcc")
-        .args(&[
-            "src/wrapper.c",
-            "-c",
-            "-fPIC",
-            &format!("-I{}", include_path),
-            "-o",
-        ])
+        .args(&["src/wrapper.c", "-c", "-fPIC", &format!("-I{}", path), "-o"])
         .arg(&format!("{}/wrapper.o", out_dir))
         .status()
         .unwrap();
@@ -26,16 +19,27 @@ fn make() {
     println!("cargo:rustc-link-search=native={}", out_dir);
 }
 
-fn generate_binding() {
-    let lo_include_path = std::env::var("LO_INCLUDE_PATH").ok();
-    if lo_include_path.is_none() {
-        panic!("no LO_INCLUDE_PATH found");
-    }
+#[cfg(not(feature = "unstable"))]
+fn generate_binding(path: &str) {
     let bindings = bindgen::Builder::default()
         .header("src/wrapper.h")
-        .clang_arg("-Wall")
         .layout_tests(false)
-        .clang_arg(format!("-I{}", lo_include_path.unwrap()))
+        .clang_arg(format!("-I{}", path))
+        .generate()
+        .expect("Unable to generate bindings");
+
+    bindings
+        .write_to_file("src/bindings.rs")
+        .expect("Couldn't write bindings!");
+}
+
+#[cfg(feature = "unstable")]
+fn generate_binding(path: &str) {
+    let bindings = bindgen::Builder::default()
+        .header("src/wrapper.h")
+        .layout_tests(false)
+        .clang_arg("-D LOK_USE_UNSTABLE_API")
+        .clang_arg(format!("-I{}", path))
         .generate()
         .expect("Unable to generate bindings");
 
@@ -45,7 +49,8 @@ fn generate_binding() {
 }
 
 fn main() {
-    make();
-    generate_binding();
+    let lo_include_path = std::env::var("LO_INCLUDE_PATH").unwrap_or_default();
+    make(&lo_include_path);
+    generate_binding(&lo_include_path);
     println!("cargo:rustc-link-lib=static=wrapper");
 }
