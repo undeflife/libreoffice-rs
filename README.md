@@ -22,9 +22,9 @@ due to [this issue](https://github.com/rust-lang/rust-bindgen/issues/1090) , her
 ## Example
 
 ```rust
-  use libreoffice_rs::wrapper::Office;
+  use libreoffice_rs::Office;
   // your libreoffice installation path
-  let office = Office::new("/usr/lib/libreoffice/program");
-  let doc = office.document_load("/tmp/test.doc");
+  let mut office = Office::new("/usr/lib/libreoffice/program");
+  let mut doc = office.document_load("/tmp/test.doc");
   doc.save_as("/tmp/test.pdf", "pdf", None);
 ```
