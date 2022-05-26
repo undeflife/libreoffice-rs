@@ -6,8 +6,10 @@
 )]
 #![allow(clippy::all)]
 mod bindings;
+mod error;
 
 pub use bindings::*;
+pub use error::Error;
 
 use core::ffi::c_void;
 use std::ffi::CString;
@@ -22,13 +24,19 @@ pub struct Document {
 }
 
 impl Office {
-    pub fn new(install_path: &str) -> Office {
+    pub fn new(install_path: &str) -> Result<Office, Error> {
         let c_install_path = CString::new(install_path).unwrap();
         unsafe {
             let lok = lok_init_wrapper(c_install_path.as_ptr());
-            Office {
-                lok,
-                lok_clz: (*lok).pClass,
+            let raw_error = (*(*lok).pClass).getError.unwrap()(lok);
+            match *raw_error {
+                0 => Ok(Office {
+                    lok,
+                    lok_clz: (*lok).pClass,
+                }),
+                _ => Err(Error::new(
+                    CString::from_raw(raw_error).into_string().unwrap(),
+                )),
             }
         }
     }
@@ -42,7 +50,7 @@ impl Office {
     pub fn get_error(&mut self) -> String {
         unsafe {
             let raw_error = (*self.lok_clz).getError.unwrap()(self.lok);
-            CString::from_raw(error).into_string().unwrap()
+            CString::from_raw(raw_error).into_string().unwrap()
         }
     }
 
@@ -52,23 +60,32 @@ impl Office {
         }
     }
 
-    pub fn document_load(&mut self, url: &str) -> Document {
+    pub fn document_load(&mut self, url: &str) -> Result<Document, Error> {
         let c_url = CString::new(url).unwrap();
         unsafe {
             let doc = (*self.lok_clz).documentLoad.unwrap()(self.lok, c_url.as_ptr());
-            Document { doc }
+            let error = self.get_error();
+            if error != "" {
+                return Err(Error::new(error));
+            }
+            Ok(Document { doc })
         }
     }
 
-    pub fn document_load_with(&mut self, url: &str, options: &str) {
+    pub fn document_load_with(&mut self, url: &str, options: &str) -> Result<Document, Error> {
         let c_url = CString::new(url).unwrap();
         let c_options = CString::new(options).unwrap();
         unsafe {
-            (*self.lok_clz).documentLoadWithOptions.unwrap()(
+            let doc = (*self.lok_clz).documentLoadWithOptions.unwrap()(
                 self.lok,
                 c_url.as_ptr(),
                 c_options.as_ptr(),
             );
+            let error = self.get_error();
+            if error != "" {
+                return Err(Error::new(error));
+            }
+            Ok(Document { doc })
         }
     }
 }
@@ -86,11 +103,19 @@ impl Document {
             );
         }
     }
+
+    pub fn destroy(&mut self) {
+        unsafe {
+            (*(*self.doc).pClass).destroy.unwrap()(self.doc);
+        }
+    }
 }
 
 #[test]
 fn test_convert() {
-    let mut office = Office::new("/opt/libreoffice/instdir/program");
-    let mut doc = office.document_load("/tmp/1.doc");
+    let mut office = Office::new("/usr/lib/libreoffice/program").unwrap();
+    let mut doc = office.document_load("/tmp/1.doc").unwrap();
     doc.save_as("/tmp/1.png", "png", None);
+    assert_eq!(office.get_error(), "".to_string());
+    office.destroy();
 }
