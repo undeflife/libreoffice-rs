@@ -89,6 +89,13 @@ impl Office {
         }
     }
 }
+
+impl Drop for Office {
+    fn drop(&mut self) {
+        println!("drop office");
+        self.destroy()
+    }
+}
 impl Document {
     pub fn save_as(&mut self, url: &str, format: &str, filter: Option<&str>) {
         let c_url = CString::new(url).unwrap();
@@ -111,11 +118,17 @@ impl Document {
     }
 }
 
+impl Drop for Document {
+    fn drop(&mut self) {
+        println!("drop document");
+        self.destroy()
+    }
+}
+
 #[test]
 fn test_convert() {
     let mut office = Office::new("/usr/lib/libreoffice/program").unwrap();
     let mut doc = office.document_load("/tmp/1.doc").unwrap();
     doc.save_as("/tmp/1.png", "png", None);
     assert_eq!(office.get_error(), "".to_string());
-    office.destroy();
 }

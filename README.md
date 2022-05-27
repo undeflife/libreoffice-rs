@@ -26,6 +26,4 @@ due to [this issue](https://github.com/rust-lang/rust-bindgen/issues/1090) , her
   let mut office = Office::new("/usr/lib/libreoffice/program");
   let mut doc = office.document_load("/tmp/test.doc");
   doc.save_as("/tmp/test.pdf", "pdf", None);
-  // always remember to destroy 
-  office.destroy();
 ```

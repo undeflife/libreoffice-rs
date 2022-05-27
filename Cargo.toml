@@ -19,6 +19,6 @@ crate-type = ["cdylib","rlib"]
 bindgen = "0.59"
 
 
-[feature]
+[features]
 default = []
-unstable = ["unstable"]
+unstable = []

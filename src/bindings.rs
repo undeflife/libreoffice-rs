@@ -684,6 +684,8 @@ pub const SEPARATOR: u8 = 47u8;
 pub type size_t = ::std::os::raw::c_ulong;
 pub type wchar_t = ::std::os::raw::c_int;
 pub type max_align_t = f64;
+#[doc = " @see lok::Office::registerCallback()."]
+#[doc = "@since LibreOffice 6.0"]
 pub type LibreOfficeKitCallback = ::std::option::Option<
     unsafe extern "C" fn(
         nType: ::std::os::raw::c_int,
@@ -691,6 +693,8 @@ pub type LibreOfficeKitCallback = ::std::option::Option<
         pData: *mut ::std::os::raw::c_void,
     ),
 >;
+#[doc = " @see lok::Office::runLoop()."]
+#[doc = "@since LibreOffice 6.3"]
 pub type LibreOfficeKitPollCallback = ::std::option::Option<
     unsafe extern "C" fn(
         pData: *mut ::std::os::raw::c_void,
@@ -722,6 +726,7 @@ pub struct _LibreOfficeKitClass {
     pub getError: ::std::option::Option<
         unsafe extern "C" fn(pThis: *mut LibreOfficeKit) -> *mut ::std::os::raw::c_char,
     >,
+    #[doc = " @since LibreOffice 5.0"]
     pub documentLoadWithOptions: ::std::option::Option<
         unsafe extern "C" fn(
             pThis: *mut LibreOfficeKit,
@@ -729,7 +734,9 @@ pub struct _LibreOfficeKitClass {
             pOptions: *const ::std::os::raw::c_char,
         ) -> *mut LibreOfficeKitDocument,
     >,
+    #[doc = " @since LibreOffice 5.2"]
     pub freeError: ::std::option::Option<unsafe extern "C" fn(pFree: *mut ::std::os::raw::c_char)>,
+    #[doc = " @since LibreOffice 6.0"]
     pub registerCallback: ::std::option::Option<
         unsafe extern "C" fn(
             pThis: *mut LibreOfficeKit,
@@ -737,12 +744,18 @@ pub struct _LibreOfficeKitClass {
             pData: *mut ::std::os::raw::c_void,
         ),
     >,
+    #[doc = " @see lok::Office::getFilterTypes()."]
+    #[doc = "@since LibreOffice 6.0"]
     pub getFilterTypes: ::std::option::Option<
         unsafe extern "C" fn(pThis: *mut LibreOfficeKit) -> *mut ::std::os::raw::c_char,
     >,
+    #[doc = " @see lok::Office::setOptionalFeatures()."]
+    #[doc = "@since LibreOffice 6.0"]
     pub setOptionalFeatures: ::std::option::Option<
         unsafe extern "C" fn(pThis: *mut LibreOfficeKit, features: ::std::os::raw::c_ulonglong),
     >,
+    #[doc = " @see lok::Office::setDocumentPassword()."]
+    #[doc = "@since LibreOffice 6.0"]
     pub setDocumentPassword: ::std::option::Option<
         unsafe extern "C" fn(
             pThis: *mut LibreOfficeKit,
@@ -750,15 +763,21 @@ pub struct _LibreOfficeKitClass {
             pPassword: *const ::std::os::raw::c_char,
         ),
     >,
+    #[doc = " @see lok::Office::getVersionInfo()."]
+    #[doc = "@since LibreOffice 6.0"]
     pub getVersionInfo: ::std::option::Option<
         unsafe extern "C" fn(pThis: *mut LibreOfficeKit) -> *mut ::std::os::raw::c_char,
     >,
+    #[doc = " @see lok::Office::runMacro()."]
+    #[doc = "@since LibreOffice 6.0"]
     pub runMacro: ::std::option::Option<
         unsafe extern "C" fn(
             pThis: *mut LibreOfficeKit,
             pURL: *const ::std::os::raw::c_char,
         ) -> ::std::os::raw::c_int,
     >,
+    #[doc = " @see lok::Office::signDocument()."]
+    #[doc = "@since LibreOffice 6.2"]
     pub signDocument: ::std::option::Option<
         unsafe extern "C" fn(
             pThis: *mut LibreOfficeKit,
@@ -769,6 +788,7 @@ pub struct _LibreOfficeKitClass {
             nPrivateKeyBinarySize: ::std::os::raw::c_int,
         ) -> bool,
     >,
+    #[doc = " @see lok::Office::runLoop()"]
     pub runLoop: ::std::option::Option<
         unsafe extern "C" fn(
             pThis: *mut LibreOfficeKit,
@@ -777,6 +797,7 @@ pub struct _LibreOfficeKitClass {
             pData: *mut ::std::os::raw::c_void,
         ),
     >,
+    #[doc = " @see lok::Office::sendDialogEvent"]
     pub sendDialogEvent: ::std::option::Option<
         unsafe extern "C" fn(
             pThis: *mut LibreOfficeKit,
@@ -784,6 +805,7 @@ pub struct _LibreOfficeKitClass {
             pArguments: *const ::std::os::raw::c_char,
         ),
     >,
+    #[doc = " @see lok::Office::setOption"]
     pub setOption: ::std::option::Option<
         unsafe extern "C" fn(
             pThis: *mut LibreOfficeKit,
@@ -810,6 +832,8 @@ pub struct _LibreOfficeKitDocumentClass {
             pFilterOptions: *const ::std::os::raw::c_char,
         ) -> ::std::os::raw::c_int,
     >,
+    #[doc = " @see lok::Document::getDocumentType()."]
+    #[doc = "@since LibreOffice 6.0"]
     pub getDocumentType: ::std::option::Option<
         unsafe extern "C" fn(pThis: *mut LibreOfficeKitDocument) -> ::std::os::raw::c_int,
     >,
