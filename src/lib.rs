@@ -9,21 +9,33 @@ mod bindings;
 mod error;
 
 pub use bindings::*;
-pub use error::Error;
+use error::Error;
 
 use core::ffi::c_void;
 use std::ffi::CString;
-
+/// A Wrapper for the `LibreOfficeKit` C API.
 pub struct Office {
     lok: *mut LibreOfficeKit,
     lok_clz: *mut LibreOfficeKitClass,
 }
-
+/// A Wrapper for the `LibreOfficeKitDocument` C API.
 pub struct Document {
     doc: *mut LibreOfficeKitDocument,
 }
 
 impl Office {
+    /// Create a new LibreOfficeKit instance.
+    ///
+    /// # Arguments
+    ///
+    ///  * `install_path` - The path to the LibreOffice installation.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libreoffice_rs::Office;
+    /// let office = Office::new("/usr/lib/libreoffice/program");
+    /// ```
     pub fn new(install_path: &str) -> Result<Office, Error> {
         let c_install_path = CString::new(install_path).unwrap();
         unsafe {
@@ -41,12 +53,14 @@ impl Office {
         }
     }
 
+    ///
     pub fn destroy(&mut self) {
         unsafe {
             (*self.lok_clz).destroy.unwrap()(self.lok);
         }
     }
 
+    /// Returns the last error as a string
     pub fn get_error(&mut self) -> String {
         unsafe {
             let raw_error = (*self.lok_clz).getError.unwrap()(self.lok);
@@ -54,12 +68,24 @@ impl Office {
         }
     }
 
+    /// Registers a callback. LOK will invoke this function when it wants to
+    /// inform the client about events.
+    ///
+    /// # Arguments
+    ///
+    ///  * `callback` - the callback to invoke
+    ///  * `user_data` - the user data, will be passed to the callback on invocation
+    ///
     pub fn registerCallback(&mut self, callback: LibreOfficeKitCallback, data: *mut c_void) {
         unsafe {
             (*self.lok_clz).registerCallback.unwrap()(self.lok, callback, data);
         }
     }
 
+    /// Loads a document from a URL.
+    ///
+    /// # Arguments
+    ///  * `url` - The URL to load.
     pub fn document_load(&mut self, url: &str) -> Result<Document, Error> {
         let c_url = CString::new(url).unwrap();
         unsafe {
@@ -72,6 +98,14 @@ impl Office {
         }
     }
 
+    /// Loads a document from a URL with additional options.
+    ///
+    /// # Arguments
+    /// * `url` - The URL to load.
+    /// * `options` - options for the import filter, e.g. SkipImages.
+    ///               Another useful FilterOption is "Language=...".  It is consumed
+    ///               by the documentLoad() itself, and when provided, LibreOfficeKit
+    ///               switches the language accordingly first.
     pub fn document_load_with(&mut self, url: &str, options: &str) -> Result<Document, Error> {
         let c_url = CString::new(url).unwrap();
         let c_options = CString::new(options).unwrap();
@@ -96,6 +130,18 @@ impl Drop for Office {
     }
 }
 impl Document {
+    /// Stores the document's persistent data to a URL and
+    /// continues to be a representation of the old URL.
+    ///
+    /// # Arguments
+    /// * `url` - the location where to store the document
+    /// * `format` - the format to use while exporting, when omitted, then deducted from pURL's extension
+    /// * `filter` -  options for the export filter, e.g. SkipImages.Another useful FilterOption is "TakeOwnership".  It is consumed
+    ///               by the saveAs() itself, and when provided, the document identity
+    ///               changes to the provided pUrl - meaning that '.uno:ModifiedStatus'
+    ///               is triggered as with the "Save As..." in the UI.
+    ///              "TakeOwnership" mode must not be used when saving to PNG or PDF.
+    ///
     pub fn save_as(&mut self, url: &str, format: &str, filter: Option<&str>) {
         let c_url = CString::new(url).unwrap();
         let c_format: CString = CString::new(format).unwrap();
