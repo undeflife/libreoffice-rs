@@ -5,10 +5,10 @@
     non_upper_case_globals
 )]
 #![allow(clippy::all)]
-mod bindings;
+include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+
 mod error;
 
-pub use bindings::*;
 use error::Error;
 
 use core::ffi::c_void;
