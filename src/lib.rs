@@ -92,7 +92,6 @@ impl Office {
 
 impl Drop for Office {
     fn drop(&mut self) {
-        println!("drop office");
         self.destroy()
     }
 }
@@ -120,7 +119,6 @@ impl Document {
 
 impl Drop for Document {
     fn drop(&mut self) {
-        println!("drop document");
         self.destroy()
     }
 }
