@@ -12,7 +12,7 @@ mod error;
 use error::Error;
 
 use core::ffi::c_void;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 /// A Wrapper for the `LibreOfficeKit` C API.
 pub struct Office {
     lok: *mut LibreOfficeKit,
@@ -47,7 +47,7 @@ impl Office {
                     lok_clz: (*lok).pClass,
                 }),
                 _ => Err(Error::new(
-                    CString::from_raw(raw_error).into_string().unwrap(),
+                    CStr::from_ptr(raw_error).to_string_lossy().into_owned(),
                 )),
             }
         }
@@ -64,7 +64,7 @@ impl Office {
     pub fn get_error(&mut self) -> String {
         unsafe {
             let raw_error = (*self.lok_clz).getError.unwrap()(self.lok);
-            CString::from_raw(raw_error).into_string().unwrap()
+            CStr::from_ptr(raw_error).to_string_lossy().into_owned()
         }
     }
 
