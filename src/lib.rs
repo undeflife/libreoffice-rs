@@ -120,13 +120,14 @@ impl Office {
     ///
     /// @since LibreOffice 6.0
 
-    pub fn set_document_password(&mut self, url: &str, password: &str) {
+    pub fn set_document_password(&mut self, url: &str, password: &str) -> Result<(), Error> {
         let c_url = CString::new(url).unwrap();
+        let c_password = CString::new(password).unwrap();
         unsafe {
             (*self.lok_clz).setDocumentPassword.unwrap()(
                 self.lok,
                 c_url.as_ptr(),
-                password.as_ptr(),
+                c_password.as_ptr(),
             );
             let error = self.get_error();
             if error != "" {
