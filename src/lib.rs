@@ -76,7 +76,7 @@ impl Office {
     ///  * `callback` - the callback to invoke
     ///  * `user_data` - the user data, will be passed to the callback on invocation
     ///
-    pub fn registerCallback(&mut self, callback: LibreOfficeKitCallback, data: *mut c_void) {
+    pub fn register_callback(&mut self, callback: LibreOfficeKitCallback, data: *mut c_void) {
         unsafe {
             (*self.lok_clz).registerCallback.unwrap()(self.lok, callback, data);
         }
@@ -97,6 +97,44 @@ impl Office {
             Ok(Document { doc })
         }
     }
+    ///
+    /// Set password required for loading or editing a document.
+    ///
+    /// Loading the document is blocked until the password is provided.
+    ///
+    ///
+    /// # Arguments
+    ///  * `url` - the URL of the document, as sent to the callback
+    ///  * `password` - the password, nullptr indicates no password
+    ///
+    /// In response to LOK_CALLBACK_DOCUMENT_PASSWORD, a valid password
+    /// will continue loading the document, an invalid password will
+    /// result in another LOK_CALLBACK_DOCUMENT_PASSWORD request,
+    /// and a NULL password will abort loading the document.
+    ///
+    /// In response to LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY, a valid
+    /// password will continue loading the document, an invalid password will
+    /// result in another LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY request,
+    /// and a NULL password will continue loading the document in read-only
+    /// mode.
+    ///
+    /// @since LibreOffice 6.0
+
+    pub fn set_document_password(&mut self, url: &str, password: &str) {
+        let c_url = CString::new(url).unwrap();
+        unsafe {
+            (*self.lok_clz).setDocumentPassword.unwrap()(
+                self.lok,
+                c_url.as_ptr(),
+                password.as_ptr(),
+            );
+            let error = self.get_error();
+            if error != "" {
+                return Err(Error::new(error));
+            }
+            Ok(())
+        }
+    }
 
     /// Loads a document from a URL with additional options.
     ///
@@ -106,6 +144,14 @@ impl Office {
     ///               Another useful FilterOption is "Language=...".  It is consumed
     ///               by the documentLoad() itself, and when provided, LibreOfficeKit
     ///               switches the language accordingly first.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libreoffice_rs::Office;
+    /// let office = Office::new("/usr/lib/libreoffice/program");
+    /// office.document_load_with("./test.odt", "en-US");
+    /// ```
     pub fn document_load_with(&mut self, url: &str, options: &str) -> Result<Document, Error> {
         let c_url = CString::new(url).unwrap();
         let c_options = CString::new(options).unwrap();

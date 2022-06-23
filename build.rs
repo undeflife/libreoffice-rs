@@ -6,11 +6,17 @@ use std::process::Command;
 fn make(path: &str) {
     let out_dir = env::var("OUT_DIR").unwrap();
 
-    Command::new("gcc")
+    let status = Command::new("gcc")
         .args(&["src/wrapper.c", "-c", "-fPIC", &format!("-I{}", path), "-o"])
         .arg(&format!("{}/wrapper.o", out_dir))
         .status()
         .unwrap();
+    if !status.success() {
+        panic!(
+            "make wrapper returns {:?}, maybe LO_INCLUDE_PATH is empty",
+            status.code().unwrap()
+        );
+    }
     Command::new("ar")
         .args(&["crus", "libwrapper.a", "wrapper.o"])
         .current_dir(&Path::new(&out_dir))
