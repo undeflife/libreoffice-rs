@@ -199,10 +199,9 @@ impl Office {
     ///     let input_path_as_uri = "file:///home/vip/Tests/test.odt";
     ///     let password = "test";
     ///     let password_was_set = Arc::new(AtomicBool::new(false));
-    ///     let flags = LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD as u64;
     ///     let mut office = Office::new("/usr/lib/libreoffice/program")?;
     /// 
-    ///     office.set_optional_features(flags)?;
+    ///     office.set_optional_features(LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD)?;
     ///     office.register_callback({
     ///         let mut office = office.clone();
     ///         move |_ntype, _payload| {
