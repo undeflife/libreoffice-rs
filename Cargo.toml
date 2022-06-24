@@ -1,6 +1,6 @@
 [package]
 name = "libreoffice-rs"
-version = "0.2.1"
+version = "0.3"
 edition = "2021"
 description = "Rust binding for LibreOfficeKit"
 keywords = ["LibreOfficeKit", "lok", "ffi"]
