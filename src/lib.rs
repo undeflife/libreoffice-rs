@@ -13,7 +13,9 @@ use error::Error;
 
 use core::ffi::c_void;
 use std::ffi::{CStr, CString};
+
 /// A Wrapper for the `LibreOfficeKit` C API.
+#[derive(Clone)]
 pub struct Office {
     lok: *mut LibreOfficeKit,
     lok_clz: *mut LibreOfficeKitClass,
@@ -23,6 +25,36 @@ pub struct Document {
     doc: *mut LibreOfficeKitDocument,
 }
 
+/// Optional features of LibreOfficeKit, in particular callbacks that block
+///  LibreOfficeKit until the corresponding reply is received, which would
+///  deadlock if the client does not support the feature.
+///
+///  @see [Office::set_optional_features]
+pub enum LibreOfficeKitOptionalFeatures {
+
+    /// Handle `LOK_CALLBACK_DOCUMENT_PASSWORD` by prompting the user for a password.
+    ///
+    /// @see [Office::set_document_password]
+    LOK_FEATURE_DOCUMENT_PASSWORD = (1 << 0),
+
+    /// Handle `LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY` by prompting the user for a password.
+    ///
+    /// @see [Office::set_document_password]
+    LOK_FEATURE_DOCUMENT_PASSWORD_TO_MODIFY = (1 << 1),
+
+    /// Request to have the part number as an 5th value in the `LOK_CALLBACK_INVALIDATE_TILES` payload.
+    LOK_FEATURE_PART_IN_INVALIDATION_CALLBACK = (1 << 2),
+
+    /// Turn off tile rendering for annotations
+    LOK_FEATURE_NO_TILED_ANNOTATIONS = (1 << 3),
+
+    /// Enable range based header data
+    LOK_FEATURE_RANGE_HEADERS = (1 << 4),
+
+    /// Request to have the active view's Id as the 1st value in the `LOK_CALLBACK_INVALIDATE_VISIBLE_CURSOR` payload.
+    LOK_FEATURE_VIEWID_IN_VISCURSOR_INVALIDATION_CALLBACK = (1 << 5)
+}
+                                                             
 impl Office {
     /// Create a new LibreOfficeKit instance.
     ///
@@ -73,13 +105,28 @@ impl Office {
     ///
     /// # Arguments
     ///
-    ///  * `callback` - the callback to invoke
-    ///  * `user_data` - the user data, will be passed to the callback on invocation
+    ///  * `cb` - the callback to invoke (type, payload)
     ///
-    pub fn register_callback(&mut self, callback: LibreOfficeKitCallback, data: *mut c_void) {
+    pub fn register_callback<F: FnMut(c_int, *const std::os::raw::c_char)  + 'static> (&mut self, cb: F) -> Result<(), Error> {
         unsafe {
+            //LibreOfficeKitCallback typedef (int nType, const char* pPayload, void* pData);
+            unsafe extern "C" fn shim(n_type: std::os::raw::c_int, payload: *const std::os::raw::c_char, data: *mut std::os::raw::c_void) {
+                let a: *mut Box<dyn FnMut()> = data as *mut Box<dyn FnMut()>;
+                let f: &mut (dyn FnMut()) = &mut **a;
+                let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
+            }
+            let a: *mut Box<dyn FnMut(i32, *const std::os::raw::c_char) > = Box::into_raw(Box::new(Box::new(cb)));
+            let data: *mut std::os::raw::c_void = a as *mut std::ffi::c_void;
+            let callback: LibreOfficeKitCallback = Some(shim);
             (*self.lok_clz).registerCallback.unwrap()(self.lok, callback, data);
+
+            let error = self.get_error();
+            if error != "" {
+                return Err(Error::new(error));
+            }
         }
+
+        Ok(())
     }
 
     /// Loads a document from a URL.
@@ -97,29 +144,81 @@ impl Office {
             Ok(Document { doc })
         }
     }
+    
+    /// Enable features such as password interaction
+    ///
+    /// # Arguments
+    ///  * `feature_flags` - The feature flags to set.
+    ///
+    /// @see [LibreOfficeKitOptionalFeatures]
+    ///
+    /// @since LibreOffice 6.0
+    pub fn set_optional_features(&mut self, feature_flags: u64) -> Result<(), Error> {        
+        unsafe {
+            let doc = (*self.lok_clz).setOptionalFeatures.unwrap()(self.lok, feature_flags);
+            let error = self.get_error();
+            if error != "" {
+                return Err(Error::new(error));
+            }
+            Ok(())
+        }
+    }
+
     ///
     /// Set password required for loading or editing a document.
     ///
     /// Loading the document is blocked until the password is provided.
-    ///
+    /// This MUST be used in combination of features and within a callback
     ///
     /// # Arguments
     ///  * `url` - the URL of the document, as sent to the callback
     ///  * `password` - the password, nullptr indicates no password
     ///
-    /// In response to LOK_CALLBACK_DOCUMENT_PASSWORD, a valid password
+    /// In response to `LOK_CALLBACK_DOCUMENT_PASSWORD`, a valid password
     /// will continue loading the document, an invalid password will
-    /// result in another LOK_CALLBACK_DOCUMENT_PASSWORD request,
+    /// result in another `LOK_CALLBACK_DOCUMENT_PASSWORD` request,
     /// and a NULL password will abort loading the document.
     ///
-    /// In response to LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY, a valid
+    /// In response to `LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY`, a valid
     /// password will continue loading the document, an invalid password will
-    /// result in another LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY request,
+    /// result in another `LOK_CALLBACK_DOCUMENT_PASSWORD_TO_MODIFY` request,
     /// and a NULL password will continue loading the document in read-only
     /// mode.
     ///
     /// @since LibreOffice 6.0
-
+    ///
+    /// # Example
+    ///
+    /// ``` 
+    /// use libreoffice_rs::{Office, LibreOfficeKitOptionalFeatures};
+    /// use std::error::Error;
+    /// use std::sync::atomic::{AtomicBool, Ordering};
+    /// use std::sync::Arc;
+    /// 
+    /// fn main() -> Result<(), Box<dyn Error>> {
+    ///     let input_path = "/home/vip/Tests/test.odt";
+    ///     let input_path_as_uri = "file:///home/vip/Tests/test.odt";
+    ///     let password = "test";
+    ///     let password_was_set = Arc::new(AtomicBool::new(false));
+    ///     let flags = LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD as u64;
+    ///     let mut office = Office::new("/usr/lib/libreoffice/program")?;
+    /// 
+    ///     office.set_optional_features(flags)?;
+    ///     office.register_callback({
+    ///         let mut office = office.clone();
+    ///         move |_ntype, _payload| {
+    ///             if !password_was_set.load(Ordering::Relaxed) {
+    ///                 let ret = office.set_document_password(input_path_as_uri, password);
+    ///                 password_was_set.store(true, Ordering::Relaxed);
+    ///             }
+    ///         }
+    ///     })?;
+    /// 
+    ///     let mut doc = office.document_load(input_path)?;
+    /// 
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn set_document_password(&mut self, url: &str, password: &str) -> Result<(), Error> {
         let c_url = CString::new(url).unwrap();
         let c_password = CString::new(password).unwrap();
@@ -176,9 +275,12 @@ impl Drop for Office {
         self.destroy()
     }
 }
+
 impl Document {
     /// Stores the document's persistent data to a URL and
     /// continues to be a representation of the old URL.
+    ///
+    /// If the result is not true, then there's an error (possibly unsupported format or other errors)
     ///
     /// # Arguments
     /// * `url` - the location where to store the document
@@ -189,18 +291,20 @@ impl Document {
     ///               is triggered as with the "Save As..." in the UI.
     ///              "TakeOwnership" mode must not be used when saving to PNG or PDF.
     ///
-    pub fn save_as(&mut self, url: &str, format: &str, filter: Option<&str>) {
+    pub fn save_as(&mut self, url: &str, format: &str, filter: Option<&str>) -> bool {
         let c_url = CString::new(url).unwrap();
         let c_format: CString = CString::new(format).unwrap();
         let c_filter: CString = CString::new(filter.unwrap_or_default()).unwrap();
-        unsafe {
+        let ret = unsafe {
             (*(*self.doc).pClass).saveAs.unwrap()(
                 self.doc,
                 c_url.as_ptr(),
                 c_format.as_ptr(),
                 c_filter.as_ptr(),
-            );
-        }
+            )
+        };
+
+        ret != 0
     }
 
     pub fn destroy(&mut self) {
