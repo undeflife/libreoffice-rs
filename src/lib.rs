@@ -107,7 +107,7 @@ impl Office {
     ///
     ///  * `cb` - the callback to invoke (type, payload)
     ///
-    pub fn register_callback<F: FnMut(c_int, *const std::os::raw::c_char)  + 'static> (&mut self, cb: F) -> Result<(), Error> {
+    pub fn register_callback<F: FnMut(std::os::raw::c_int, *const std::os::raw::c_char)  + 'static> (&mut self, cb: F) -> Result<(), Error> {
         unsafe {
             //LibreOfficeKitCallback typedef (int nType, const char* pPayload, void* pData);
             unsafe extern "C" fn shim(n_type: std::os::raw::c_int, payload: *const std::os::raw::c_char, data: *mut std::os::raw::c_void) {
@@ -115,7 +115,7 @@ impl Office {
                 let f: &mut (dyn FnMut()) = &mut **a;
                 let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
             }
-            let a: *mut Box<dyn FnMut(i32, *const std::os::raw::c_char) > = Box::into_raw(Box::new(Box::new(cb)));
+            let a: *mut Box<dyn FnMut(std::os::raw::c_int, *const std::os::raw::c_char) > = Box::into_raw(Box::new(Box::new(cb)));
             let data: *mut std::os::raw::c_void = a as *mut std::ffi::c_void;
             let callback: LibreOfficeKitCallback = Some(shim);
             (*self.lok_clz).registerCallback.unwrap()(self.lok, callback, data);
