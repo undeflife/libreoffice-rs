@@ -11,7 +11,6 @@ mod error;
 
 use error::Error;
 
-use core::ffi::c_void;
 use std::ffi::{CStr, CString};
 
 /// A Wrapper for the `LibreOfficeKit` C API.
@@ -110,7 +109,7 @@ impl Office {
     pub fn register_callback<F: FnMut(std::os::raw::c_int, *const std::os::raw::c_char)  + 'static> (&mut self, cb: F) -> Result<(), Error> {
         unsafe {
             //LibreOfficeKitCallback typedef (int nType, const char* pPayload, void* pData);
-            unsafe extern "C" fn shim(n_type: std::os::raw::c_int, payload: *const std::os::raw::c_char, data: *mut std::os::raw::c_void) {
+            unsafe extern "C" fn shim(_type: std::os::raw::c_int, _payload: *const std::os::raw::c_char, data: *mut std::os::raw::c_void) {
                 let a: *mut Box<dyn FnMut()> = data as *mut Box<dyn FnMut()>;
                 let f: &mut (dyn FnMut()) = &mut **a;
                 let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
@@ -153,9 +152,9 @@ impl Office {
     /// @see [LibreOfficeKitOptionalFeatures]
     ///
     /// @since LibreOffice 6.0
-    pub fn set_optional_features(&mut self, feature_flags: u64) -> Result<(), Error> {        
+    pub fn set_optional_features(&mut self, optional_feature: LibreOfficeKitOptionalFeatures) -> Result<(), Error> {
         unsafe {
-            let doc = (*self.lok_clz).setOptionalFeatures.unwrap()(self.lok, feature_flags);
+            (*self.lok_clz).setOptionalFeatures.unwrap()(self.lok, optional_feature as u64);
             let error = self.get_error();
             if error != "" {
                 return Err(Error::new(error));
