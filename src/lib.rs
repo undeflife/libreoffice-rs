@@ -29,6 +29,7 @@ pub struct Document {
 ///  deadlock if the client does not support the feature.
 ///
 ///  @see [Office::set_optional_features]
+#[derive (Copy, Clone)]
 pub enum LibreOfficeKitOptionalFeatures {
 
     /// Handle `LOK_CALLBACK_DOCUMENT_PASSWORD` by prompting the user for a password.
@@ -121,7 +122,7 @@ impl Office {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
     /// office.set_optional_features(
-    ///    LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD
+    ///    [LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD]
     /// )?;
     ///
     /// office.register_callback(Box::new({
@@ -184,7 +185,7 @@ impl Office {
         }
     }
 
-    /// Enable features such as password interaction
+    /// Set bitmask of optional features supported by the client and return the flags set.
     ///
     /// # Arguments
     ///  * `feature_flags` - The feature flags to set.
@@ -198,24 +199,43 @@ impl Office {
     /// ```
     /// use libreoffice_rs::{Office, LibreOfficeKitOptionalFeatures};
     ///
-    /// # fn  main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
-    /// office.set_optional_features(
-    ///    LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD
-    /// )?;
+    /// let feature_flags = [
+    ///     LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD,
+    ///     LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD_TO_MODIFY,
+    /// ];
+    /// let flags_set = office.set_optional_features(feature_flags)?;
+    ///
+    /// // Integration tests assertions
+    /// for feature_flag in feature_flags {
+    ///   assert!(flags_set & feature_flag as u64 > 0,
+    ///     "Failed to set the flag with value: {}", feature_flag as u64
+    ///   );
+    /// }
+    /// assert!(flags_set &
+    /// LibreOfficeKitOptionalFeatures::LOK_FEATURE_PART_IN_INVALIDATION_CALLBACK as u64 == 0,
+    ///   "LOK_FEATURE_PART_IN_INVALIDATION_CALLBACK feature was wrongly set!"
+    /// );
     ///
     /// # Ok(())
     /// # }
     /// ```
-    pub fn set_optional_features(&mut self, optional_feature: LibreOfficeKitOptionalFeatures) -> Result<(), Error> {
+    pub fn set_optional_features<T>(&mut self, optional_features: T) -> Result<u64, Error>
+    where T: IntoIterator<Item = LibreOfficeKitOptionalFeatures> {
+        let feature_flags: u64 = optional_features.into_iter()
+            .map(|i| i as u64)
+            .fold(0, |acc, item| acc | item);
+
         unsafe {
-            (*self.lok_clz).setOptionalFeatures.unwrap()(self.lok, optional_feature as u64);
+            (*self.lok_clz).setOptionalFeatures.unwrap()(self.lok, feature_flags);
             let error = self.get_error();
             if error != "" {
                 return Err(Error::new(error));
             }
-            Ok(())
         }
+
+        Ok(feature_flags)
     }
 
     ///
@@ -254,7 +274,7 @@ impl Office {
     /// let password_was_set = AtomicBool::new(false);
     /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
     /// 
-    /// office.set_optional_features(LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD)?;
+    /// office.set_optional_features([LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD])?;
     /// office.register_callback({
     ///     let mut office = office.clone();
     ///     let doc_abs_uri = doc_abs_uri.clone();
