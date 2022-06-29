@@ -53,7 +53,7 @@ pub enum LibreOfficeKitOptionalFeatures {
     /// Request to have the active view's Id as the 1st value in the `LOK_CALLBACK_INVALIDATE_VISIBLE_CURSOR` payload.
     LOK_FEATURE_VIEWID_IN_VISCURSOR_INVALIDATION_CALLBACK = (1 << 5)
 }
-                                                             
+
 impl Office {
     /// Create a new LibreOfficeKit instance.
     ///
@@ -65,7 +65,13 @@ impl Office {
     ///
     /// ```
     /// use libreoffice_rs::Office;
-    /// let office = Office::new("/usr/lib/libreoffice/program");
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
+    ///
+    /// assert_eq!("", office.get_error());
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn new(install_path: &str) -> Result<Office, Error> {
         let c_install_path = CString::new(install_path).unwrap();
@@ -84,7 +90,7 @@ impl Office {
         }
     }
 
-    ///
+    /// Please use `drop(office)` instead of calling directly this method
     pub fn destroy(&mut self) {
         unsafe {
             (*self.lok_clz).destroy.unwrap()(self.lok);
@@ -106,15 +112,36 @@ impl Office {
     ///
     ///  * `cb` - the callback to invoke (type, payload)
     ///
-    pub fn register_callback<F: FnMut(std::os::raw::c_int, *const std::os::raw::c_char)  + 'static> (&mut self, cb: F) -> Result<(), Error> {
+    /// # Example
+    ///
+    /// ```
+    /// use libreoffice_rs::{Office, LibreOfficeKitOptionalFeatures};
+    /// use std::sync::atomic::{AtomicBool, Ordering};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
+    /// office.set_optional_features(
+    ///    LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD
+    /// )?;
+    ///
+    /// office.register_callback(Box::new({
+    ///     move |_type, _payload| {
+    ///         println!("Call set_document_password and/or do something here!");
+    ///     }
+    /// }))?;
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn register_callback<F: FnMut(i32, *const i8)  + 'static> (&mut self, cb: F) -> Result<(), Error> {
         unsafe {
-            //LibreOfficeKitCallback typedef (int nType, const char* pPayload, void* pData);
-            unsafe extern "C" fn shim(_type: std::os::raw::c_int, _payload: *const std::os::raw::c_char, data: *mut std::os::raw::c_void) {
+            // LibreOfficeKitCallback typedef (int nType, const char* pPayload, void* pData);
+            unsafe extern "C" fn shim(_type: i32, _payload: *const i8, data: *mut std::os::raw::c_void) {
                 let a: *mut Box<dyn FnMut()> = data as *mut Box<dyn FnMut()>;
                 let f: &mut (dyn FnMut()) = &mut **a;
                 let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
             }
-            let a: *mut Box<dyn FnMut(std::os::raw::c_int, *const std::os::raw::c_char) > = Box::into_raw(Box::new(Box::new(cb)));
+            let a: *mut Box<dyn FnMut(i32, *const i8) > = Box::into_raw(Box::new(Box::new(cb)));
             let data: *mut std::os::raw::c_void = a as *mut std::ffi::c_void;
             let callback: LibreOfficeKitCallback = Some(shim);
             (*self.lok_clz).registerCallback.unwrap()(self.lok, callback, data);
@@ -132,6 +159,19 @@ impl Office {
     ///
     /// # Arguments
     ///  * `url` - The URL to load.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libreoffice_rs::Office;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
+    /// office.document_load("./test_data/test.odt")?;
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn document_load(&mut self, url: &str) -> Result<Document, Error> {
         let c_url = CString::new(url).unwrap();
         unsafe {
@@ -143,7 +183,7 @@ impl Office {
             Ok(Document { doc })
         }
     }
-    
+
     /// Enable features such as password interaction
     ///
     /// # Arguments
@@ -152,6 +192,21 @@ impl Office {
     /// @see [LibreOfficeKitOptionalFeatures]
     ///
     /// @since LibreOffice 6.0
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libreoffice_rs::{Office, LibreOfficeKitOptionalFeatures};
+    ///
+    /// # fn  main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
+    /// office.set_optional_features(
+    ///    LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD
+    /// )?;
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn set_optional_features(&mut self, optional_feature: LibreOfficeKitOptionalFeatures) -> Result<(), Error> {
         unsafe {
             (*self.lok_clz).setOptionalFeatures.unwrap()(self.lok, optional_feature as u64);
@@ -190,32 +245,32 @@ impl Office {
     ///
     /// ``` 
     /// use libreoffice_rs::{Office, LibreOfficeKitOptionalFeatures};
-    /// use std::error::Error;
     /// use std::sync::atomic::{AtomicBool, Ordering};
     /// use std::sync::Arc;
     /// 
-    /// fn main() -> Result<(), Box<dyn Error>> {
-    ///     let input_path = "/home/vip/Tests/test.odt";
-    ///     let input_path_as_uri = "file:///home/vip/Tests/test.odt";
-    ///     let password = "test";
-    ///     let password_was_set = Arc::new(AtomicBool::new(false));
-    ///     let mut office = Office::new("/usr/lib/libreoffice/program")?;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let doc_path = "./test_data/test_password.odt";
+    /// let doc_abs_uri = format!("file://{}", std::fs::canonicalize(doc_path)?.display());
+    /// let password = "test";
+    /// let password_was_set = Arc::new(AtomicBool::new(false));
+    /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
     /// 
-    ///     office.set_optional_features(LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD)?;
-    ///     office.register_callback({
-    ///         let mut office = office.clone();
-    ///         move |_ntype, _payload| {
-    ///             if !password_was_set.load(Ordering::Relaxed) {
-    ///                 let ret = office.set_document_password(input_path_as_uri, password);
-    ///                 password_was_set.store(true, Ordering::Relaxed);
-    ///             }
+    /// office.set_optional_features(LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD)?;
+    /// office.register_callback({
+    ///     let mut office = office.clone();
+    ///     let doc_abs_uri = doc_abs_uri.clone();
+    ///     move |_, _| {
+    ///         if !password_was_set.load(Ordering::Acquire) {
+    ///             let ret = office.set_document_password(&doc_abs_uri, &password);
+    ///             password_was_set.store(true, Ordering::Release);
     ///         }
-    ///     })?;
+    ///     }
+    /// })?;
     /// 
-    ///     let mut doc = office.document_load(input_path)?;
-    /// 
-    ///     Ok(())
-    /// }
+    /// let mut _doc = office.document_load(&doc_abs_uri)?;
+    ///
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn set_document_password(&mut self, url: &str, password: &str) -> Result<(), Error> {
         let c_url = CString::new(url).unwrap();
@@ -247,8 +302,13 @@ impl Office {
     ///
     /// ```
     /// use libreoffice_rs::Office;
-    /// let office = Office::new("/usr/lib/libreoffice/program");
-    /// office.document_load_with("./test.odt", "en-US");
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
+    /// office.document_load_with("./test_data/test.odt", "en-US")?;
+    ///
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn document_load_with(&mut self, url: &str, options: &str) -> Result<Document, Error> {
         let c_url = CString::new(url).unwrap();
@@ -289,6 +349,24 @@ impl Document {
     ///               is triggered as with the "Save As..." in the UI.
     ///              "TakeOwnership" mode must not be used when saving to PNG or PDF.
     ///
+    /// # Example
+    ///
+    /// ```
+    /// use libreoffice_rs::Office;
+    ///
+    /// # fn  main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
+    /// let mut doc = office.document_load("./test_data/test.odt").unwrap();
+    /// let output_path = std::env::temp_dir().join("libreoffice_rs_save_as.png");
+    /// let output_location = output_path.display().to_string();
+    /// let previously_saved = doc.save_as(&output_location, "png", None);
+    /// let _ = std::fs::remove_file(&output_path);
+    ///
+    /// assert!(previously_saved, "{}", office.get_error());
+    ///
+    /// #  Ok(())
+    /// # }
+    /// ```
     pub fn save_as(&mut self, url: &str, format: &str, filter: Option<&str>) -> bool {
         let c_url = CString::new(url).unwrap();
         let c_format: CString = CString::new(format).unwrap();
@@ -305,6 +383,7 @@ impl Document {
         ret != 0
     }
 
+    /// Please use `drop(document)` instead of calling directly this method
     pub fn destroy(&mut self) {
         unsafe {
             (*(*self.doc).pClass).destroy.unwrap()(self.doc);
@@ -316,12 +395,4 @@ impl Drop for Document {
     fn drop(&mut self) {
         self.destroy()
     }
-}
-
-#[test]
-fn test_convert() {
-    let mut office = Office::new("/usr/lib/libreoffice/program").unwrap();
-    let mut doc = office.document_load("/tmp/1.doc").unwrap();
-    doc.save_as("/tmp/1.png", "png", None);
-    assert_eq!(office.get_error(), "".to_string());
 }
