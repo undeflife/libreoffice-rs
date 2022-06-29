@@ -8,7 +8,9 @@
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 mod error;
+pub mod urls;
 
+use urls::DocUrl;
 use error::Error;
 
 use std::ffi::{CStr, CString};
@@ -117,7 +119,6 @@ impl Office {
     ///
     /// ```
     /// use libreoffice_rs::{Office, LibreOfficeKitOptionalFeatures};
-    /// use std::sync::atomic::{AtomicBool, Ordering};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
@@ -165,16 +166,18 @@ impl Office {
     ///
     /// ```
     /// use libreoffice_rs::Office;
+    /// use libreoffice_rs::urls;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
-    /// office.document_load("./test_data/test.odt")?;
+    /// let doc_url = urls::local_into_abs("./test_data/test.odt")?;
+    /// office.document_load(doc_url)?;
     ///
     /// # Ok(())
     /// # }
     /// ```
-    pub fn document_load(&mut self, url: &str) -> Result<Document, Error> {
-        let c_url = CString::new(url).unwrap();
+    pub fn document_load(&mut self, url: DocUrl) -> Result<Document, Error> {
+        let c_url = CString::new(url.to_string()).unwrap();
         unsafe {
             let doc = (*self.lok_clz).documentLoad.unwrap()(self.lok, c_url.as_ptr());
             let error = self.get_error();
@@ -264,12 +267,11 @@ impl Office {
     /// # Example
     ///
     /// ``` 
-    /// use libreoffice_rs::{Office, LibreOfficeKitOptionalFeatures};
+    /// use libreoffice_rs::{Office, LibreOfficeKitOptionalFeatures, urls};
     /// use std::sync::atomic::{AtomicBool, Ordering};
     /// 
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let doc_path = "./test_data/test_password.odt";
-    /// let doc_abs_uri = format!("file://{}", std::fs::canonicalize(doc_path)?.display());
+    /// let doc_url = urls::local_into_abs("./test_data/test_password.odt")?;
     /// let password = "test";
     /// let password_was_set = AtomicBool::new(false);
     /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
@@ -277,22 +279,22 @@ impl Office {
     /// office.set_optional_features([LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD])?;
     /// office.register_callback({
     ///     let mut office = office.clone();
-    ///     let doc_abs_uri = doc_abs_uri.clone();
+    ///     let doc_url = doc_url.clone();
     ///     move |_, _| {
     ///         if !password_was_set.load(Ordering::Acquire) {
-    ///             let ret = office.set_document_password(&doc_abs_uri, &password);
+    ///             let ret = office.set_document_password(doc_url.clone(), &password);
     ///             password_was_set.store(true, Ordering::Release);
     ///         }
     ///     }
     /// })?;
     /// 
-    /// let mut _doc = office.document_load(&doc_abs_uri)?;
+    /// let mut _doc = office.document_load(doc_url)?;
     ///
     /// # Ok(())
     /// # }
     /// ```
-    pub fn set_document_password(&mut self, url: &str, password: &str) -> Result<(), Error> {
-        let c_url = CString::new(url).unwrap();
+    pub fn set_document_password(&mut self, url: DocUrl, password: &str) -> Result<(), Error> {
+        let c_url = CString::new(url.to_string()).unwrap();
         let c_password = CString::new(password).unwrap();
         unsafe {
             (*self.lok_clz).setDocumentPassword.unwrap()(
@@ -320,17 +322,18 @@ impl Office {
     /// # Example
     ///
     /// ```
-    /// use libreoffice_rs::Office;
+    /// use libreoffice_rs::{Office, urls};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
-    /// office.document_load_with("./test_data/test.odt", "en-US")?;
+    /// let doc_url = urls::local_into_abs("./test_data/test.odt")?;
+    /// office.document_load_with(doc_url, "en-US")?;
     ///
     /// # Ok(())
     /// # }
     /// ```
-    pub fn document_load_with(&mut self, url: &str, options: &str) -> Result<Document, Error> {
-        let c_url = CString::new(url).unwrap();
+    pub fn document_load_with(&mut self, url: DocUrl, options: &str) -> Result<Document, Error> {
+        let c_url = CString::new(url.to_string()).unwrap();
         let c_options = CString::new(options).unwrap();
         unsafe {
             let doc = (*self.lok_clz).documentLoadWithOptions.unwrap()(
@@ -372,10 +375,12 @@ impl Document {
     ///
     /// ```
     /// use libreoffice_rs::Office;
+    /// use libreoffice_rs::urls;
     ///
     /// # fn  main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
-    /// let mut doc = office.document_load("./test_data/test.odt").unwrap();
+    /// let doc_url = urls::local_into_abs("./test_data/test.odt")?;
+    /// let mut doc = office.document_load(doc_url)?;
     /// let output_path = std::env::temp_dir().join("libreoffice_rs_save_as.png");
     /// let output_location = output_path.display().to_string();
     /// let previously_saved = doc.save_as(&output_location, "png", None);
