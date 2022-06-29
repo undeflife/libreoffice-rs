@@ -246,13 +246,12 @@ impl Office {
     /// ``` 
     /// use libreoffice_rs::{Office, LibreOfficeKitOptionalFeatures};
     /// use std::sync::atomic::{AtomicBool, Ordering};
-    /// use std::sync::Arc;
     /// 
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let doc_path = "./test_data/test_password.odt";
     /// let doc_abs_uri = format!("file://{}", std::fs::canonicalize(doc_path)?.display());
     /// let password = "test";
-    /// let password_was_set = Arc::new(AtomicBool::new(false));
+    /// let password_was_set = AtomicBool::new(false);
     /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
     /// 
     /// office.set_optional_features(LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD)?;
