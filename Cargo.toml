@@ -13,7 +13,7 @@ crate-type = ["cdylib","rlib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-
+url = "2.2.2"
 
 [build-dependencies]
 bindgen = "0.59"
