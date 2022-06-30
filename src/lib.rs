@@ -310,6 +310,71 @@ impl Office {
         }
     }
 
+    /// This method provides a defense mechanism against infinite loops, upon password entry failures:
+    /// * Loading the document is blocked until a valid password is set within callbacks
+    /// * A wrong password will result into infinite repeated callback loops
+    /// * This method advises `LibreOfficeKit` to stop requesting a password *"as soon as possible"*
+    ///
+    /// It is safe for this method to be invoked even if the originally provided password was correct:
+    /// - `LibreOfficeKit` appears to maintain thread-local values of the password. It will stick to the first password entry value.
+    /// That will translate into a a successfully loaded document.
+    /// - `LibreOfficeKit` seems to send an "excessive" number of callbacks (potential internal issues with locks/monitors)
+    ///
+    /// # Arguments
+    ///  * `url` - the URL of the document, as sent to the callback
+    ///
+    /// # Example
+    ///
+    /// ``` 
+    /// use libreoffice_rs::{Office, LibreOfficeKitOptionalFeatures, urls};
+    /// use std::sync::atomic::{AtomicBool, Ordering};
+    /// 
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let doc_url = urls::local_into_abs("./test_data/test_password.odt")?;
+    /// let password = "forgotten_invalid_password_which_is_just_test";
+    /// let password_was_set = AtomicBool::new(false);
+    /// let failed_password_attempt = AtomicBool::new(false);
+    /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
+    /// 
+    /// office.set_optional_features([LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD])?;
+    /// office.register_callback({
+    ///     let mut office = office.clone();
+    ///     let doc_url = doc_url.clone();
+    ///     move |_, _| {
+    ///         if !password_was_set.load(Ordering::Acquire) {
+    ///             let ret = office.set_document_password(doc_url.clone(), &password);
+    ///             password_was_set.store(true, Ordering::Release);
+    ///         } else {
+    ///             if !failed_password_attempt.load(Ordering::Acquire) {
+    ///                 let ret = office.unset_document_password(doc_url.clone());
+    ///                 failed_password_attempt.store(true, Ordering::Release);
+    ///             }
+    ///         }
+    ///     }
+    /// })?;
+    ///
+    /// assert!(office.document_load(doc_url).is_err(),
+    ///         "Document loaded successfully with a wrong password!");
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn unset_document_password(&mut self, url: DocUrl) -> Result<(), Error> {
+        let c_url = CString::new(url.to_string()).unwrap();
+        unsafe {
+            (*self.lok_clz).setDocumentPassword.unwrap()(
+                self.lok,
+                c_url.as_ptr(),
+                std::ptr::null(),
+            );
+            let error = self.get_error();
+            if error != "" {
+                return Err(Error::new(error));
+            }
+            Ok(())
+        }
+    }
+    
     /// Loads a document from a URL with additional options.
     ///
     /// # Arguments
