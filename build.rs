@@ -57,7 +57,8 @@ fn generate_binding(path: &str) {
 }
 
 fn main() {
-    let lo_include_path = std::env::var("LO_INCLUDE_PATH").unwrap_or_default();
+    let lo_include_path =
+        std::env::var("LO_INCLUDE_PATH").unwrap_or_else(|_| "/usr/include/LibreOfficeKit".into());
     make(&lo_include_path);
     generate_binding(&lo_include_path);
     println!("cargo:rustc-link-lib=static=wrapper");

@@ -69,17 +69,21 @@ pub fn local_as_abs<S: Into<String>>(path: S) -> Result<DocUrl, Error> {
     let p = Path::new(&uri_location);
 
     if !p.is_absolute() {
-        return Err(Error::new(format!("The file path {} must be absolute!", &uri_location)));
+        return Err(Error::new(format!(
+            "The file path {} must be absolute!",
+            &uri_location
+        )));
     }
 
     let url_ret = Url::from_file_path(&uri_location);
 
     match url_ret {
-        Ok(url_value) => {
-            Ok(DocUrl(url_value.as_str().to_owned()))
-        },
+        Ok(url_value) => Ok(DocUrl(url_value.as_str().to_owned())),
         Err(ex) => {
-            return Err(Error::new(format!("Failed to parse as URL {}! {:?}", uri_location, ex)));
+            return Err(Error::new(format!(
+                "Failed to parse as URL {}! {:?}",
+                uri_location, ex
+            )));
         }
     }
 }
@@ -107,7 +111,11 @@ pub fn remote<S: Into<String>>(uri: S) -> Result<DocUrl, Error> {
     let uri_location_str = uri_location.as_str();
 
     if let Err(ex) = Url::parse(uri_location_str) {
-        return Err(Error::new(format!("Failed to parse URI {}! {}", uri_location, ex.to_string())));
+        return Err(Error::new(format!(
+            "Failed to parse URI {}! {}",
+            uri_location,
+            ex.to_string()
+        )));
     }
 
     Ok(DocUrl(uri_location))

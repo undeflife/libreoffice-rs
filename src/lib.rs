@@ -10,8 +10,8 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 mod error;
 pub mod urls;
 
-use urls::DocUrl;
 use error::Error;
+use urls::DocUrl;
 
 use std::ffi::{CStr, CString};
 
@@ -31,9 +31,8 @@ pub struct Document {
 ///  deadlock if the client does not support the feature.
 ///
 ///  @see [Office::set_optional_features]
-#[derive (Copy, Clone)]
+#[derive(Copy, Clone)]
 pub enum LibreOfficeKitOptionalFeatures {
-
     /// Handle `LOK_CALLBACK_DOCUMENT_PASSWORD` by prompting the user for a password.
     ///
     /// @see [Office::set_document_password]
@@ -54,7 +53,7 @@ pub enum LibreOfficeKitOptionalFeatures {
     LOK_FEATURE_RANGE_HEADERS = (1 << 4),
 
     /// Request to have the active view's Id as the 1st value in the `LOK_CALLBACK_INVALIDATE_VISIBLE_CURSOR` payload.
-    LOK_FEATURE_VIEWID_IN_VISCURSOR_INVALIDATION_CALLBACK = (1 << 5)
+    LOK_FEATURE_VIEWID_IN_VISCURSOR_INVALIDATION_CALLBACK = (1 << 5),
 }
 
 impl Office {
@@ -93,8 +92,7 @@ impl Office {
         }
     }
 
-    /// Please use `drop(office)` instead of calling directly this method
-    pub fn destroy(&mut self) {
+    fn destroy(&mut self) {
         unsafe {
             (*self.lok_clz).destroy.unwrap()(self.lok);
         }
@@ -135,15 +133,22 @@ impl Office {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn register_callback<F: FnMut(i32, *const i8)  + 'static> (&mut self, cb: F) -> Result<(), Error> {
+    pub fn register_callback<F: FnMut(i32, *const i8) + 'static>(
+        &mut self,
+        cb: F,
+    ) -> Result<(), Error> {
         unsafe {
             // LibreOfficeKitCallback typedef (int nType, const char* pPayload, void* pData);
-            unsafe extern "C" fn shim(_type: i32, _payload: *const i8, data: *mut std::os::raw::c_void) {
+            unsafe extern "C" fn shim(
+                _type: i32,
+                _payload: *const i8,
+                data: *mut std::os::raw::c_void,
+            ) {
                 let a: *mut Box<dyn FnMut()> = data as *mut Box<dyn FnMut()>;
                 let f: &mut (dyn FnMut()) = &mut **a;
                 let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
             }
-            let a: *mut Box<dyn FnMut(i32, *const i8) > = Box::into_raw(Box::new(Box::new(cb)));
+            let a: *mut Box<dyn FnMut(i32, *const i8)> = Box::into_raw(Box::new(Box::new(cb)));
             let data: *mut std::os::raw::c_void = a as *mut std::ffi::c_void;
             let callback: LibreOfficeKitCallback = Some(shim);
             (*self.lok_clz).registerCallback.unwrap()(self.lok, callback, data);
@@ -225,8 +230,11 @@ impl Office {
     /// # }
     /// ```
     pub fn set_optional_features<T>(&mut self, optional_features: T) -> Result<u64, Error>
-    where T: IntoIterator<Item = LibreOfficeKitOptionalFeatures> {
-        let feature_flags: u64 = optional_features.into_iter()
+    where
+        T: IntoIterator<Item = LibreOfficeKitOptionalFeatures>,
+    {
+        let feature_flags: u64 = optional_features
+            .into_iter()
             .map(|i| i as u64)
             .fold(0, |acc, item| acc | item);
 
@@ -266,16 +274,16 @@ impl Office {
     ///
     /// # Example
     ///
-    /// ``` 
+    /// ```
     /// use libreoffice_rs::{Office, LibreOfficeKitOptionalFeatures, urls};
     /// use std::sync::atomic::{AtomicBool, Ordering};
-    /// 
+    ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let doc_url = urls::local_into_abs("./test_data/test_password.odt")?;
     /// let password = "test";
     /// let password_was_set = AtomicBool::new(false);
     /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
-    /// 
+    ///
     /// office.set_optional_features([LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD])?;
     /// office.register_callback({
     ///     let mut office = office.clone();
@@ -287,7 +295,7 @@ impl Office {
     ///         }
     ///     }
     /// })?;
-    /// 
+    ///
     /// let mut _doc = office.document_load(doc_url)?;
     ///
     /// # Ok(())
@@ -325,17 +333,17 @@ impl Office {
     ///
     /// # Example
     ///
-    /// ``` 
+    /// ```
     /// use libreoffice_rs::{Office, LibreOfficeKitOptionalFeatures, urls};
     /// use std::sync::atomic::{AtomicBool, Ordering};
-    /// 
+    ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let doc_url = urls::local_into_abs("./test_data/test_password.odt")?;
     /// let password = "forgotten_invalid_password_which_is_just_test";
     /// let password_was_set = AtomicBool::new(false);
     /// let failed_password_attempt = AtomicBool::new(false);
     /// let mut office = Office::new("/usr/lib/libreoffice/program")?;
-    /// 
+    ///
     /// office.set_optional_features([LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD])?;
     /// office.register_callback({
     ///     let mut office = office.clone();
@@ -374,7 +382,7 @@ impl Office {
             Ok(())
         }
     }
-    
+
     /// Loads a document from a URL with additional options.
     ///
     /// # Arguments
@@ -472,8 +480,7 @@ impl Document {
         ret != 0
     }
 
-    /// Please use `drop(document)` instead of calling directly this method
-    pub fn destroy(&mut self) {
+    fn destroy(&mut self) {
         unsafe {
             (*(*self.doc).pClass).destroy.unwrap()(self.doc);
         }
