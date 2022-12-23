@@ -12,7 +12,7 @@ libreoffice-rs = 0.3.1
 
 you need install LibreOffice ( >= 6.0 is recommended ), Debian 11 for example: 
 ```bash
-$ sudo apt-get install libreoffice-core libreofficekit-dev libclang-dev
+$ sudo apt-get install libreoffice libreofficekit-dev clang
 # set env variable `LO_INCLUDE_PATH` to the LibreOffice headers.
 $ export LO_INCLUDE_PATH=/usr/include/LibreOfficeKit
 ```
@@ -30,6 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   let doc_url = urls::local_into_abs("./test_data/test.odt")?;
   let mut doc = office.document_load(doc_url)?;
   doc.save_as("/tmp/test.pdf", "pdf", None);
+  Ok(())
 }
 ```
 ## License
