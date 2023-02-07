@@ -7,7 +7,7 @@ Rust bindings to [LibreOfficeKit](https://docs.libreoffice.org/libreofficekit.ht
 
 ```toml
 [dependencies]
-libreoffice-rs = 0.3.1
+libreoffice-rs = 0.3
 ```
 
 you need install LibreOffice ( >= 6.0 is recommended ), Debian 11 for example: 
