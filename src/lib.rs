@@ -21,6 +21,7 @@ pub struct Office {
     lok: *mut LibreOfficeKit,
     lok_clz: *mut LibreOfficeKitClass,
 }
+
 /// A Wrapper for the `LibreOfficeKitDocument` C API.
 pub struct Document {
     doc: *mut LibreOfficeKitDocument,
@@ -419,6 +420,24 @@ impl Office {
                 return Err(Error::new(error));
             }
             Ok(Document { doc })
+        }
+    }
+
+    /// Runs a macro stored at a specific path (within a document).
+    ///
+    /// # Arguments
+    /// * `path` - The macro path (macro:///Standard.Module1.MyMacro).
+    pub fn run_macro(&mut self, path: &str) -> Result<(), Error> {
+        let path = CString::new(path).unwrap();
+        unsafe {
+            let x = (*self.lok_clz).runMacro.unwrap()(self.lok, path.as_ptr());
+            if x == 0 {
+                let error = self.get_error();
+                if error != "" {
+                    return Err(Error::new(error));
+                }
+            }
+            Ok(())
         }
     }
 }
