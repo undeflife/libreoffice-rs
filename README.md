@@ -17,8 +17,6 @@ $ sudo apt-get install libreoffice libreofficekit-dev clang
 $ export LO_INCLUDE_PATH=/usr/include/LibreOfficeKit
 ```
 
-due to [this issue](https://github.com/rust-lang/rust-bindgen/issues/1090) , here use a libwrapper.a to carry `static funtion lok_init` which defined in `LibreOfficeKitInit.h`.
-
 ## Example
 
 ```rust
