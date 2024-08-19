@@ -13,7 +13,7 @@ fn test_password_callback() {
         .set_optional_features([LibreOfficeKitOptionalFeatures::LOK_FEATURE_DOCUMENT_PASSWORD])
         .unwrap();
 
-    const LOK_CALLBACK_DOCUMENT_PASSWORD: i32 = 20;
+    const LOK_CALLBACK_DOCUMENT_PASSWORD: std::os::raw::c_int = 20;
 
     office
         .register_callback({
