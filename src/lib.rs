@@ -93,12 +93,6 @@ impl Office {
         }
     }
 
-    fn destroy(&mut self) {
-        unsafe {
-            (*self.lok_clz).destroy.unwrap()(self.lok);
-        }
-    }
-
     /// Returns the last error as a string
     pub fn get_error(&mut self) -> String {
         unsafe {
@@ -466,7 +460,9 @@ impl Office {
 
 impl Drop for Office {
     fn drop(&mut self) {
-        self.destroy()
+        unsafe {
+            (*self.lok_clz).destroy.unwrap()(self.lok);
+        }
     }
 }
 
@@ -520,16 +516,12 @@ impl Document {
 
         ret != 0
     }
-
-    fn destroy(&mut self) {
-        unsafe {
-            (*(*self.doc).pClass).destroy.unwrap()(self.doc);
-        }
-    }
 }
 
 impl Drop for Document {
     fn drop(&mut self) {
-        self.destroy()
+        unsafe {
+            (*(*self.doc).pClass).destroy.unwrap()(self.doc);
+        }
     }
 }
