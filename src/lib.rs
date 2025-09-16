@@ -152,7 +152,9 @@ impl Office {
                 // Catch panics from calling the callback
                 _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
                     // Invoke the callback
-                    (**callback)(ty, payload);
+                    unsafe {
+                        (**callback)(ty, payload);
+                    }
                 }));
             }
 
