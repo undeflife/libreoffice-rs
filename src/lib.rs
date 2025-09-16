@@ -32,6 +32,7 @@ pub struct Document {
 ///  deadlock if the client does not support the feature.
 ///
 ///  @see [Office::set_optional_features]
+#[allow(non_camel_case_types)]
 #[derive(Copy, Clone)]
 pub enum LibreOfficeKitOptionalFeatures {
     /// Handle `LOK_CALLBACK_DOCUMENT_PASSWORD` by prompting the user for a password.
