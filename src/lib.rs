@@ -1,12 +1,12 @@
-#![allow(
-    dead_code,
+#[allow(
     non_snake_case,
     non_camel_case_types,
-    non_upper_case_globals
+    non_upper_case_globals,
+    unnecessary_transmutes
 )]
-#![allow(clippy::all)]
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
+#[allow(clippy::all)]
+mod bindings;
+pub use bindings::*;
 mod error;
 pub mod urls;
 
