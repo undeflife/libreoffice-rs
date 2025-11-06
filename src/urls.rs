@@ -41,7 +41,7 @@ pub fn local_into_abs<S: Into<String>>(path: S) -> Result<DocUrl, Error> {
     match std::fs::canonicalize(&doc_path) {
         Ok(doc_abspath) => local_as_abs(doc_abspath.display().to_string()),
         Err(ex) => {
-            let msg = format!("Does the file exist at {}? {}", doc_path, ex.to_string());
+            let msg = format!("Does the file exist at {doc_path}? {ex}");
             Err(Error::new(msg))
         }
     }
@@ -70,8 +70,7 @@ pub fn local_as_abs<S: Into<String>>(path: S) -> Result<DocUrl, Error> {
 
     if !p.is_absolute() {
         return Err(Error::new(format!(
-            "The file path {} must be absolute!",
-            &uri_location
+            "The file path {uri_location} must be absolute!"
         )));
     }
 
@@ -79,12 +78,9 @@ pub fn local_as_abs<S: Into<String>>(path: S) -> Result<DocUrl, Error> {
 
     match url_ret {
         Ok(url_value) => Ok(DocUrl(url_value.as_str().to_owned())),
-        Err(ex) => {
-            return Err(Error::new(format!(
-                "Failed to parse as URL {}! {:?}",
-                uri_location, ex
-            )));
-        }
+        Err(ex) => Err(Error::new(format!(
+            "Failed to parse as URL {uri_location}! {ex:?}"
+        ))),
     }
 }
 
@@ -112,9 +108,7 @@ pub fn remote<S: Into<String>>(uri: S) -> Result<DocUrl, Error> {
 
     if let Err(ex) = Url::parse(uri_location_str) {
         return Err(Error::new(format!(
-            "Failed to parse URI {}! {}",
-            uri_location,
-            ex.to_string()
+            "Failed to parse URI {uri_location}! {ex}"
         )));
     }
 

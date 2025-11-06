@@ -1,12 +1,12 @@
-#![allow(
-    dead_code,
+#[allow(
     non_snake_case,
     non_camel_case_types,
-    non_upper_case_globals
+    non_upper_case_globals,
+    unnecessary_transmutes
 )]
-#![allow(clippy::all)]
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
+#[allow(clippy::all)]
+mod bindings;
+pub use bindings::*;
 mod error;
 pub mod urls;
 
@@ -32,6 +32,7 @@ pub struct Document {
 ///  deadlock if the client does not support the feature.
 ///
 ///  @see [Office::set_optional_features]
+#[allow(non_camel_case_types)]
 #[derive(Copy, Clone)]
 pub enum LibreOfficeKitOptionalFeatures {
     /// Handle `LOK_CALLBACK_DOCUMENT_PASSWORD` by prompting the user for a password.
@@ -90,12 +91,6 @@ impl Office {
                     CStr::from_ptr(raw_error).to_string_lossy().into_owned(),
                 )),
             }
-        }
-    }
-
-    fn destroy(&mut self) {
-        unsafe {
-            (*self.lok_clz).destroy.unwrap()(self.lok);
         }
     }
 
@@ -158,7 +153,9 @@ impl Office {
                 // Catch panics from calling the callback
                 _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
                     // Invoke the callback
-                    (**callback)(ty, payload);
+                    unsafe {
+                        (**callback)(ty, payload);
+                    }
                 }));
             }
 
@@ -177,7 +174,7 @@ impl Office {
             register_callback(self.lok, callback, user_callback.cast());
 
             let error = self.get_error();
-            if error != "" {
+            if !error.is_empty() {
                 return Err(Error::new(error));
             }
         }
@@ -209,7 +206,7 @@ impl Office {
         unsafe {
             let doc = (*self.lok_clz).documentLoad.unwrap()(self.lok, c_url.as_ptr());
             let error = self.get_error();
-            if error != "" {
+            if !error.is_empty() {
                 return Err(Error::new(error));
             }
             Ok(Document { doc })
@@ -264,7 +261,7 @@ impl Office {
         unsafe {
             (*self.lok_clz).setOptionalFeatures.unwrap()(self.lok, feature_flags);
             let error = self.get_error();
-            if error != "" {
+            if !error.is_empty() {
                 return Err(Error::new(error));
             }
         }
@@ -334,7 +331,7 @@ impl Office {
                 c_password.as_ptr(),
             );
             let error = self.get_error();
-            if error != "" {
+            if !error.is_empty() {
                 return Err(Error::new(error));
             }
             Ok(())
@@ -348,7 +345,7 @@ impl Office {
     ///
     /// It is safe for this method to be invoked even if the originally provided password was correct:
     /// - `LibreOfficeKit` appears to maintain thread-local values of the password. It will stick to the first password entry value.
-    /// That will translate into a a successfully loaded document.
+    ///   That will translate into a a successfully loaded document.
     /// - `LibreOfficeKit` seems to send an "excessive" number of callbacks (potential internal issues with locks/monitors)
     ///
     /// # Arguments
@@ -399,7 +396,7 @@ impl Office {
                 std::ptr::null(),
             );
             let error = self.get_error();
-            if error != "" {
+            if !error.is_empty() {
                 return Err(Error::new(error));
             }
             Ok(())
@@ -411,9 +408,9 @@ impl Office {
     /// # Arguments
     /// * `url` - The URL to load.
     /// * `options` - options for the import filter, e.g. SkipImages.
-    ///               Another useful FilterOption is "Language=...".  It is consumed
-    ///               by the documentLoad() itself, and when provided, LibreOfficeKit
-    ///               switches the language accordingly first.
+    ///   Another useful FilterOption is "Language=...".  It is consumed
+    ///   by the documentLoad() itself, and when provided, LibreOfficeKit
+    ///   switches the language accordingly first.
     ///
     /// # Example
     ///
@@ -438,7 +435,7 @@ impl Office {
                 c_options.as_ptr(),
             );
             let error = self.get_error();
-            if error != "" {
+            if !error.is_empty() {
                 return Err(Error::new(error));
             }
             Ok(Document { doc })
@@ -455,7 +452,7 @@ impl Office {
             let x = (*self.lok_clz).runMacro.unwrap()(self.lok, path.as_ptr());
             if x == 0 {
                 let error = self.get_error();
-                if error != "" {
+                if !error.is_empty() {
                     return Err(Error::new(error));
                 }
             }
@@ -466,7 +463,9 @@ impl Office {
 
 impl Drop for Office {
     fn drop(&mut self) {
-        self.destroy()
+        unsafe {
+            (*self.lok_clz).destroy.unwrap()(self.lok);
+        }
     }
 }
 
@@ -480,10 +479,10 @@ impl Document {
     /// * `url` - the location where to store the document
     /// * `format` - the format to use while exporting, when omitted, then deducted from pURL's extension
     /// * `filter` -  options for the export filter, e.g. SkipImages.Another useful FilterOption is "TakeOwnership".  It is consumed
-    ///               by the saveAs() itself, and when provided, the document identity
-    ///               changes to the provided pUrl - meaning that '.uno:ModifiedStatus'
-    ///               is triggered as with the "Save As..." in the UI.
-    ///              "TakeOwnership" mode must not be used when saving to PNG or PDF.
+    ///   by the saveAs() itself, and when provided, the document identity
+    ///   changes to the provided pUrl - meaning that '.uno:ModifiedStatus'
+    ///   is triggered as with the "Save As..." in the UI.
+    ///   "TakeOwnership" mode must not be used when saving to PNG or PDF.
     ///
     /// # Example
     ///
@@ -520,16 +519,12 @@ impl Document {
 
         ret != 0
     }
-
-    fn destroy(&mut self) {
-        unsafe {
-            (*(*self.doc).pClass).destroy.unwrap()(self.doc);
-        }
-    }
 }
 
 impl Drop for Document {
     fn drop(&mut self) {
-        self.destroy()
+        unsafe {
+            (*(*self.doc).pClass).destroy.unwrap()(self.doc);
+        }
     }
 }
